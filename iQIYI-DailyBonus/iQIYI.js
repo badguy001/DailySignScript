@@ -87,22 +87,24 @@ var $nobyda = nobyda();
 (async () => {
   cookie = cookie || $nobyda.read("CookieQY")
   LogDetails = $nobyda.read("iQIYI_LogDetails") === "true" ? true : LogDetails
-	if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
-		cookie = cookie || process.env.IQIYI_COOKIE;
-		LogDetails = LogDetails || process.env.IQIYI_DEBUG;
-		barkKey = barkKey || process.env.BARK_PUSH;
-		barkServer = barkServer || process.env.BARK_SERVER;
-	}
+        if (typeof process !== 'undefined' && typeof process.env !== 'undefined') {
+                cookie = cookie || process.env.IQIYI_COOKIE;
+                LogDetails = LogDetails || process.env.IQIYI_DEBUG;
+                barkKey = barkKey || process.env.BARK_PUSH;
+                barkServer = barkServer || process.env.BARK_SERVER;
+        }
   if ($nobyda.isRequest) {
     GetCookie()
   } else if (cookie) {
     if (cookie.includes("P00001") && cookie.includes("P00003") && cookie.includes("__dfp")) {
         P00001 = cookie.match(/P00001=(.*?);/)[1];
         P00003 = cookie.match(/P00003=(.*?);/)[1];
-	dfp = cookie.match(/__dfp=(.*?)@/)[1];
+        dfp = cookie.match(/__dfp=(.*?)@/)[1];
         await login();
         await Checkin();
-	await WebCheckin();
+        await WebCheckin();
+        await HotSiteAccess();
+        await HotSiteComp();
         for (let i = 0; i < 3; i++){
           const run = await Lottery(i);
           if (run) {
@@ -113,13 +115,13 @@ var $nobyda = nobyda();
         }
         const tasks = await getTaskList();
         for (let i = 0; i < tasks.length; i++){
-        	if (![1, 4].includes(tasks[i].status)) { //0：待领取 1：已完成 2：未开始 4：进行中
-        		await joinTask(tasks[i]);
-        		await notifyTask(tasks[i]);
-        		await new Promise(r => setTimeout(r, 1000));
-        		await getTaskRewards(tasks[i]);
-        		console.log(`--------------------`)
-        	}
+                if (![1, 4].includes(tasks[i].status)) { //0：待领取 1：已完成 2：未开始 4：进行中
+                        await joinTask(tasks[i]);
+                        await notifyTask(tasks[i]);
+                        await new Promise(r => setTimeout(r, 1000));
+                        await getTaskRewards(tasks[i]);
+                        console.log(`--------------------`)
+                }
         }
         const expires = $nobyda.expire ? $nobyda.expire.replace(/\u5230\u671f/, "") : "获取失败 ⚠️"
         if (!$nobyda.isNode) $nobyda.notify("爱奇艺", "到期时间: " + expires, pushMsg.join('\n'));
@@ -180,13 +182,13 @@ function Checkin() {
       userId: P00003,
     };
     const post_date = {
-	  "natural_month_sign": {
-		"agentType": "1",
-		"agentversion": "1",
-		"authCookie": P00001,
-		"qyid": md5(stringRandom(16)),
-		"taskCode": "iQIYI_mofhr",
-		"verticalCode": "iQIYI"
+          "natural_month_sign": {
+                "agentType": "1",
+                "agentversion": "1",
+                "authCookie": P00001,
+                "qyid": md5(stringRandom(16)),
+                "taskCode": "iQIYI_mofhr",
+                "verticalCode": "iQIYI"
       }
     };
     const sign = k("UKobMjDMsDoScuWOfp6F", sign_date, {
@@ -205,7 +207,7 @@ function Checkin() {
       let CheckinMsg, rewards = [];
       const Details = LogDetails ? `msg:\n${data||error}` : '';
       try {
-      	if (error) throw new Error(`接口请求出错 ‼️`);
+        if (error) throw new Error(`接口请求出错 ‼️`);
         const obj = JSON.parse(data)
         if (obj.code === "A00000") {
           if (obj.data.code === "A0000") {
@@ -227,7 +229,7 @@ function Checkin() {
           CheckinMsg = `应用签到: Cookie无效 ⚠️`;
         }
       } catch (e) {
-      	CheckinMsg = `应用签到: ${e.message||e}`;
+        CheckinMsg = `应用签到: ${e.message||e}`;
       }
       pushMsg.push(CheckinMsg);
       console.log(`爱奇艺-${CheckinMsg} ${Details}`);
@@ -266,7 +268,7 @@ function WebCheckin() {
       let WebCheckinMsg = '';
       const Details = LogDetails ? `msg:\n${data||error}` : ''
       try {
-      	if (error) throw new Error(`接口请求出错 ‼️`);
+        if (error) throw new Error(`接口请求出错 ‼️`);
         const obj = JSON.parse(data)
         if (obj.code === "A00000") {
           if (obj.data[0].code === "A0000") {
@@ -280,10 +282,114 @@ function WebCheckin() {
           WebCheckinMsg = `网页签到: ${obj.message||'未知错误'} ⚠️`
         }
     } catch (e) {
-    	WebCheckinMsg = `网页签到: ${e.message || e}`;
+        WebCheckinMsg = `网页签到: ${e.message || e}`;
     }
       pushMsg.push(WebCheckinMsg);
       console.log(`爱奇艺-${WebCheckinMsg} ${Details}`);
+      resolve()
+    })
+  })
+}
+
+function HotSiteAccess() {
+  return new Promise(resolve => {
+    const web_sign_date = {
+      agenttype: "1",
+      agentversion: "0",
+      appKey: "basic_pcw",
+      appver: "0",
+      authCookie: P00001,
+      channelCode: "paopao_pcw",
+      dfp: dfp,
+      scoreType: "1",
+      srcplatform: "1",
+      typeCode: "point",
+      userId: P00003,
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
+      verticalCode: "iQIYI"
+    };
+
+    const sign = k("UKobMjDMsDoScuWOfp6F", web_sign_date, {
+      split: "|",
+      sort: !0,
+      splitSecretKey: !0
+    });
+    var URL = {
+      url: 'https://community.iqiyi.com/openApi/task/complete?' + w(web_sign_date) + "&sign=" + sign
+    }
+    $nobyda.get(URL, function(error, response, data) {
+      let HotSiteAccessMsg = '';
+      const Details = LogDetails ? `msg:\n${data||error}` : ''
+      try {
+        if (error) throw new Error(`接口请求出错 ‼️`);
+        const obj = JSON.parse(data)
+        if (obj.code === "A00000") {
+          if (obj.data[0].code === "A0000") {
+            // var quantity = obj.data.score;
+            HotSiteAccessMsg = "热点首页访问: 完成"
+          } else {
+            HotSiteAccessMsg = "热点首页访问: " + obj.data[0].message + " ⚠️"
+          }
+        } else {
+          HotSiteAccessMsg = `热点首页访问: ${obj.message||'未知错误'} ⚠️`
+        }
+    } catch (e) {
+        HotSiteAccessMsg = `热点首页访问: ${e.message || e}`;
+    }
+      pushMsg.push(HotSiteAccessMsg);
+      console.log(`爱奇艺-${HotSiteAccessMsg} ${Details}`);
+      resolve()
+    })
+  })
+}
+
+function HotSiteComp() {
+  return new Promise(resolve => {
+    const web_sign_date = {
+      agenttype: "1",
+      agentversion: "0",
+      appKey: "basic_pcw",
+      appver: "0",
+      authCookie: P00001,
+      channelCode: "paopao_pcw",
+      dfp: dfp,
+      scoreType: "1",
+      srcplatform: "1",
+      typeCode: "point",
+      userId: P00003,
+      // user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36",
+      verticalCode: "iQIYI"
+    };
+
+    const sign = k("UKobMjDMsDoScuWOfp6F", web_sign_date, {
+      split: "|",
+      sort: !0,
+      splitSecretKey: !0
+    });
+    var URL = {
+      url: 'https://community.iqiyi.com/openApi/score/getReward?' + w(web_sign_date) + "&sign=" + sign
+    }
+    $nobyda.get(URL, function(error, response, data) {
+      let HotSiteAccessMsg = '';
+      const Details = LogDetails ? `msg:\n${data||error}` : ''
+      try {
+        if (error) throw new Error(`接口请求出错 ‼️`);
+        const obj = JSON.parse(data)
+        if (obj.code === "A00000") {
+          if (obj.data.code === "A0000") {
+            // var quantity = obj.data.score;
+            HotSiteAccessMsg = "热点首页领奖: 完成"
+          } else {
+            HotSiteAccessMsg = "热点首页领奖: " + obj.data.message + " ⚠️"
+          }
+        } else {
+          HotSiteAccessMsg = `热点首页领奖: ${obj.message||'未知错误'} ⚠️`
+        }
+    } catch (e) {
+        HotSiteAccessMsg = `热点首页领奖: ${e.message || e}`;
+    }
+      pushMsg.push(HotSiteAccessMsg);
+      console.log(`爱奇艺-${HotSiteAccessMsg} ${Details}`);
       resolve()
     })
   })
@@ -298,7 +404,7 @@ function Lottery(s) {
         const Details = LogDetails ? `msg:\n${data||error}` : ''
         let LotteryMsg;
         try {
-        	if (error) throw new Error("接口请求出错 ‼️");
+                if (error) throw new Error("接口请求出错 ‼️");
           const obj = JSON.parse(data);
           $nobyda.last = data.match(/(机会|已经)用完/) ? true : false
           if (obj.awardName && obj.code == 0) {
@@ -310,7 +416,7 @@ function Lottery(s) {
             LotteryMsg = `应用抽奖: ${data}`
           }
         } catch (e) {
-        	LotteryMsg = `应用抽奖: ${e.message || e}`;
+                LotteryMsg = `应用抽奖: ${e.message || e}`;
         }
         console.log(`爱奇艺-${LotteryMsg} (${s+1}) ${Details}`)
         pushMsg.push(LotteryMsg)
@@ -326,8 +432,8 @@ function Lottery(s) {
 function getTaskList(task) {
   return new Promise(resolve => {
     $nobyda.get(`https://tc.vip.iqiyi.com/taskCenter/task/queryUserTask?P00001=${P00001}`, function(error, response, data) {
-    	let taskListMsg, taskList = [];
-    	const Details = LogDetails ? `msg:\n${data||error}` : '';
+        let taskListMsg, taskList = [];
+        const Details = LogDetails ? `msg:\n${data||error}` : '';
       try {
         if (error) throw new Error(`请求失败`);
         const obj = JSON.parse(data);
@@ -357,16 +463,16 @@ function getTaskList(task) {
 function joinTask(task) {
   return new Promise(resolve => {
     $nobyda.get('https://tc.vip.iqiyi.com/taskCenter/task/joinTask?taskCode=' + task.taskCode + '&lang=zh_CN&platform=0000000000000000&P00001=' + P00001, function (error, response, data) {
-    	let joinTaskMsg, Details = LogDetails ? `msg:\n${data||error}` : '';
-    	try {
-    		if (error) throw new Error(`请求失败`);
-    		const obj = JSON.parse(data);
-    		joinTaskMsg = obj.code || '领取失败';
-    	} catch (e) {
-    		joinTaskMsg = `错误 ${e.message||e}`;
-    	}
-    	console.log(`爱奇艺-领取任务: ${task.name} => ${joinTaskMsg} ${Details}`)
-    	resolve()
+        let joinTaskMsg, Details = LogDetails ? `msg:\n${data||error}` : '';
+        try {
+                if (error) throw new Error(`请求失败`);
+                const obj = JSON.parse(data);
+                joinTaskMsg = obj.code || '领取失败';
+        } catch (e) {
+                joinTaskMsg = `错误 ${e.message||e}`;
+        }
+        console.log(`爱奇艺-领取任务: ${task.name} => ${joinTaskMsg} ${Details}`)
+        resolve()
     })
   })
 }
@@ -374,16 +480,16 @@ function joinTask(task) {
 function notifyTask(task) {
   return new Promise(resolve => {
     $nobyda.get('https://tc.vip.iqiyi.com/taskCenter/task/notify?taskCode=' + task.taskCode + '&lang=zh_CN&platform=0000000000000000&P00001=' + P00001, function (error, response, data) {
-    	let notifyTaskMsg, Details = LogDetails ? `msg:\n${data||error}` : '';
-    	try {
-    		if (error) throw new Error(`请求失败`);
-    		const obj = JSON.parse(data);
-    		notifyTaskMsg = obj.code || '失败';
-    	} catch (e) {
-    		notifyTaskMsg = e.message || e;
-    	}
-    	console.log(`爱奇艺-开始任务: ${task.name} => ${notifyTaskMsg} ${Details}`)
-    	resolve()
+        let notifyTaskMsg, Details = LogDetails ? `msg:\n${data||error}` : '';
+        try {
+                if (error) throw new Error(`请求失败`);
+                const obj = JSON.parse(data);
+                notifyTaskMsg = obj.code || '失败';
+        } catch (e) {
+                notifyTaskMsg = e.message || e;
+        }
+        console.log(`爱奇艺-开始任务: ${task.name} => ${notifyTaskMsg} ${Details}`)
+        resolve()
     })
   })
 }
@@ -394,7 +500,7 @@ function getTaskRewards(task) {
       let RewardsMsg;
       const Details = LogDetails ? `msg:\n${data||error}` : ''
       try {
-      	if (error) throw new Error(`接口请求出错 ‼️`);
+        if (error) throw new Error(`接口请求出错 ‼️`);
         const obj = JSON.parse(data)
         if (obj.msg === "成功" && obj.code === "A00000" && obj.dataNew[0] !== undefined) {
           RewardsMsg = `任务奖励: ${task.name} => ${obj.dataNew[0].name + obj.dataNew[0].value} 🎉`
@@ -402,7 +508,7 @@ function getTaskRewards(task) {
           RewardsMsg = `任务奖励: ${task.name} => ${obj.msg!==`成功`&&obj.msg||`未完成`} ⚠️`
         }
       } catch (e) {
-      	RewardsMsg = `任务奖励: ${e.message||e}`;
+        RewardsMsg = `任务奖励: ${e.message||e}`;
       }
       pushMsg.push(RewardsMsg)
       console.log(`爱奇艺-${RewardsMsg} ${Details}`)
